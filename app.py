@@ -29,24 +29,29 @@ def callback():
         abort(400)
     return 'OK'
 
+
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     msg = event.message.text.strip()
 
     if msg.startswith("☁️"):
-        city = msg[1:].strip()  # remove ☁️ and extra spaces
-        if city:  # user typed ☁️City
-            report = get_weather_report_localized(city)
-        else:     # user typed just ☁️
-            report = get_weather_report_localized()
+        city = msg[1:].strip()
+        report = get_weather_report_localized(city if city else "Taipei")
+        report = "☁️ " + report
 
-        report = "☁️ " + report  # prepend emoji again for consistency
+    elif msg.endswith("天氣"):
+        city = msg[:-2].strip()
+        report = get_weather_report_localized(city if city else "Taipei")
+        report = "☁️ " + report
 
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=report)
-        )
-    # else: do nothing for non-☁️ messages
+    else:
+        return  # Do nothing if message doesn't match criteria
+
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=report)
+    )
+
 
 
 
