@@ -33,16 +33,21 @@ def callback():
 def handle_message(event):
     msg = event.message.text.strip()
 
-    if msg.endswith("天氣") and len(msg) > 2:
-        city = msg[:-2]  # remove last two chars: "天氣"
-        report = get_weather_report_localized(city)
-    else:
-        report = get_weather_report_localized()  # default to Taipei
+    if msg.startswith("☁️"):
+        city = msg[1:].strip()  # remove ☁️ and extra spaces
+        if city:  # user typed ☁️City
+            report = get_weather_report_localized(city)
+        else:     # user typed just ☁️
+            report = get_weather_report_localized()
 
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=report)
-    )
+        report = "☁️ " + report  # prepend emoji again for consistency
+
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=report)
+        )
+    # else: do nothing for non-☁️ messages
+
 
 
 @app.route("/send_daily")
