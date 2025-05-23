@@ -34,23 +34,24 @@ def callback():
 def handle_message(event):
     msg = event.message.text.strip()
 
-    if msg.startswith("☁️"):
-        city = msg[1:].strip()
-        report = get_weather_report_localized(city if city else "Taipei")
-        report = "☁️ " + report
+    if msg == "☁️":
+        report = get_weather_report_localized("Taipei")
 
-    elif msg.endswith("天氣"):
-        city = msg[:-2].strip()
-        report = get_weather_report_localized(city if city else "Taipei")
-        report = "☁️ " + report
+    elif msg.endswith("天氣") and len(msg) > 2:
+        city = msg[:-2].strip()  # Remove "天氣"
+        report = get_weather_report_localized(city)
 
     else:
-        return  # Do nothing if message doesn't match criteria
+        return  # Ignore all other messages
+
+    # Prepend ☁️ emoji to the response
+    report = "☁️ " + report
 
     line_bot_api.reply_message(
         event.reply_token,
         TextSendMessage(text=report)
     )
+
 
 
 
