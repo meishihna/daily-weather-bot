@@ -31,8 +31,19 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    report = get_weather_report_localized()
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=report))
+    msg = event.message.text.strip()
+
+    if msg.endswith("天氣") and len(msg) > 2:
+        city = msg[:-2]  # remove last two chars: "天氣"
+        report = get_weather_report_localized(city)
+    else:
+        report = get_weather_report_localized()  # default to Taipei
+
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=report)
+    )
+
 
 @app.route("/send_daily")
 def send_daily():
@@ -41,9 +52,9 @@ def send_daily():
     line_bot_api.push_message(user_id, TextSendMessage(text=report))
     return "Daily weather sent!"
 
-def get_weather_report_localized():
+def get_weather_report_localized(city="Taipei"):
     params = {
-        'q': CITY,
+        'q': city,
         'appid': WEATHER_API_KEY,
         'units': 'metric',
         'lang': 'zh_tw'
@@ -51,20 +62,23 @@ def get_weather_report_localized():
     response = requests.get(WEATHER_URL, params=params)
     data = response.json()
 
-    description = data['weather'][0]['description'].capitalize()
-    temp_min = round(data['main']['temp_min'], 1)
-    temp_max = round(data['main']['temp_max'], 1)
-    humidity = data['main']['humidity']
+    try:
+        description = data['weather'][0]['description'].capitalize()
+        temp_min = round(data['main']['temp_min'], 1)
+        temp_max = round(data['main']['temp_max'], 1)
+        humidity = data['main']['humidity']
+        rain = "有降雨" if 'rain' in data else "無降雨"
 
-    rain = "有降雨" if 'rain' in data else "無降雨"
-
-    report = f"""🌤️ {CITY} 今日天氣預報：
+        report = f"""🌤️ {city} 今日天氣預報：
 天氣狀況：{description}
 氣溫範圍：{temp_min}°C ~ {temp_max}°C
 相對濕度：{humidity}%
 降雨機率：{rain}"""
+    except:
+        report = f"⚠️ 無法取得「{city}」的天氣資料，請確認城市名稱是否正確。"
 
     return report
+
 
 if __name__ == "__main__":
     app.run(debug=True, port=8000)
