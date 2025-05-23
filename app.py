@@ -10,13 +10,13 @@ load_dotenv()
 
 app = Flask(__name__)
 
-# LINE Bot credentials
+# LINE credentials
 line_bot_api = LineBotApi(os.getenv("LINE_CHANNEL_ACCESS_TOKEN"))
 handler = WebhookHandler(os.getenv("LINE_CHANNEL_SECRET"))
 
-# OpenWeatherMap API credentials
+# Weather API settings
 WEATHER_API_KEY = os.getenv("WEATHER_API_KEY")
-CITY = "Taipei"  # You can change this to your preferred city
+CITY = "Taipei"
 WEATHER_URL = "https://api.openweathermap.org/data/2.5/weather"
 
 @app.route("/callback", methods=['POST'])
@@ -31,26 +31,38 @@ def callback():
 
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
-    weather_report = get_weather_report()
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=weather_report)
-    )
+    report = get_weather_report_localized()
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=report))
 
-def get_weather_report():
+@app.route("/send_daily")
+def send_daily():
+    user_id = "YOUR_LINE_USER_ID"  # Replace with your personal LINE ID
+    report = get_weather_report_localized()
+    line_bot_api.push_message(user_id, TextSendMessage(text=report))
+    return "Daily weather sent!"
+
+def get_weather_report_localized():
     params = {
         'q': CITY,
         'appid': WEATHER_API_KEY,
         'units': 'metric',
-        'lang': 'en'
+        'lang': 'zh_tw'
     }
     response = requests.get(WEATHER_URL, params=params)
-    weather = response.json()
+    data = response.json()
 
-    description = weather['weather'][0]['description'].capitalize()
-    temp = weather['main']['temp']
-    humidity = weather['main']['humidity']
-    report = f"🌤️ Weather in {CITY}:\n\n{description}\nTemperature: {temp}°C\nHumidity: {humidity}%"
+    description = data['weather'][0]['description'].capitalize()
+    temp_min = round(data['main']['temp_min'], 1)
+    temp_max = round(data['main']['temp_max'], 1)
+    humidity = data['main']['humidity']
+
+    rain = "有降雨" if 'rain' in data else "無降雨"
+
+    report = f"""🌤️ {CITY} 今日天氣預報：
+天氣狀況：{description}
+氣溫範圍：{temp_min}°C ~ {temp_max}°C
+相對濕度：{humidity}%
+降雨機率：{rain}"""
 
     return report
 
